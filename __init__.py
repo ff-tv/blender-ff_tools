@@ -15,8 +15,8 @@ bl_info = {
     "name" : "FF_Tools",
     "author" : "lalamax3d",
     "description" : "simple tools for myself",
-    "blender" : (2, 80, 0),
-    "version" : (0, 0, 3),
+    "blender" : (5, 0, 0),
+    "version" : (0, 5, 1),
     "location" : "View3D",
     "warning" : "",
     "category" : "Animation"
@@ -33,7 +33,7 @@ from . ff_rig import UseSingleSideControls_OT_Operator, SelectOneSidedObjects_OT
 from . ff_anim import CopyIklegs_OT_Operator, CopyIkArms_OT_Operator, KeySelectionOp_OT_Operator, KeyDeletionOp_OT_Operator, FF_PT_Anim
 from . ff_anim import EnableFcurveModifers_OT_Operator, EnableFcurveModifersAll_OT_Operator, DisableFcurveModifers_OT_Operator, DisableFcurveModifersAll_OT_Operator
 from . ff_anim import MirrorFcurveModifers_OT_Operator, CopyFcurveModifiers_OT_Operator
-from . ff_rend import setupPrismOutput_OT_Operator,setupPrismPreview_OT_Operator, setupBackGroundRender_OT_Operator, FF_PT_Rend
+from . ff_rend import FF_OT_PngRender, FF_OT_ExrRender, FF_OT_PlayblastMp4, FF_OT_PrepareCharSheet, FF_OT_Setup360Turnaround, FF_PT_Rend, FF_PT_OutputPanel
 
 
 from . ff_sk import SkZeroAll_OT_Operator,SkAnimateAll_OT_Operator,SkBindToBone_OT_Operator
@@ -86,7 +86,34 @@ classes = (
         DisableFcurveModifers_OT_Operator, DisableFcurveModifersAll_OT_Operator,
         MirrorFcurveModifers_OT_Operator, CopyFcurveModifiers_OT_Operator, 
         ReadFaceCapJson_OT_Operator, SetupFcBoneProps_OT_Operator,SetupFcSingleDriver_OT_Operator,SetupFcDrivers_OT_Operator,
-        setupPrismOutput_OT_Operator, setupPrismPreview_OT_Operator, setupBackGroundRender_OT_Operator,
-        FF_PT_Panel, FF_PT_Model, FF_PT_Rig, FF_PT_Anim, FF_PT_Rend)
+        FF_OT_PngRender, FF_OT_ExrRender, FF_OT_PlayblastMp4, FF_OT_PrepareCharSheet, FF_OT_Setup360Turnaround,
+        FF_PT_Panel, FF_PT_Model, FF_PT_Rig, FF_PT_Anim, FF_PT_Rend, FF_PT_OutputPanel)
 
-register,unregister = bpy.utils.register_classes_factory(classes)
+
+def register():
+    from .ff_rend import FF_RendProperties
+    
+    # Register FF_RendProperties first (before other classes that might use it)
+    bpy.utils.register_class(FF_RendProperties)
+    
+    # Register all other classes
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    
+    # Register custom properties for render tools
+    bpy.types.Scene.ff_rend_props = bpy.props.PointerProperty(type=FF_RendProperties)
+
+
+def unregister():
+    from .ff_rend import FF_RendProperties
+    
+    # Unregister custom properties first
+    if hasattr(bpy.types.Scene, 'ff_rend_props'):
+        del bpy.types.Scene.ff_rend_props
+    
+    # Unregister all classes
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+    
+    # Unregister FF_RendProperties last
+    bpy.utils.unregister_class(FF_RendProperties)

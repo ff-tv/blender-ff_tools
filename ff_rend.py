@@ -1,235 +1,365 @@
 import bpy
-from bpy import context as context
-
+from mathutils import Vector
 from pathlib import Path
+from math import pi, sin, cos
 
-# import PrismCore
-
-# global pcore
-# pcore = PrismCore.PrismCore(app="Blender")
-
-
-# def renderPngPasses(context):
-#     ''' 
-#         this function will setup PNG and output passes as well
-#     '''
-#     pcore.projectPath
-#     pcore.scenePath # points to workflow dir
-#     pcore.shotPath # points to shots folder
-#     pcore.fileInPipeline(bpy.data.filepath)
-#     bfp = Path(bpy.data.filepath) 
-#     #filename = bpy.path.basename(bpy.data.filepath)
-#     filename = bfp.name
-#     filepath = bfp.parent
-#     shotdir = bfp.parent.parent.parent.parent
-#     if shotdir.is_dir():
-#         rendDir = shotdir.joinpath("Rendering","3dRender")
-#     # now get file version string
-#     verInfo = filename.split(pcore.filenameSeparator)[4] # .sequenceSeparato
-#     verFormat = pcore.versionFormat
-    
-#     # create / output dir exists
-#     print ("RENDERING DIR EXPECTED PATH:", rendDir)
-#     print ("RENDERING DIR FOUND:", rendDir.exists())
-#     renderer = context.scene.render.engine #.split('_')[1]
-#     rendDir = rendDir.joinpath(renderer)
-#     rendDir.mkdir(parents=True, exist_ok=True) # will create EEVEE or CYCLES Directory
-
-#     # set relative path in output (main area)
-#     #fo = C.scene.render.filepath
-#     #bpy.path.abspath, to replace os.path.abspath
-#     #bpy.path.relpath, to replace os.path.relpath
-#     context.scene.render.filepath = rendDir.as_posix() + '/'+verInfo+'/beauty/image_'
-#     context.scene.render.image_settings.file_format = 'PNG'
-#     context.scene.render.image_settings.color_mode = 'RGBA'
-#     context.scene.render.image_settings.color_depth = '8'
-#     context.scene.render.use_file_extension = True
-#     context.scene.render.use_compositing = True
-#     context.scene.render.resolution_percentage = 100
-#     # remove all fileoutput nodes in comp area
-#     context.scene.use_nodes = True
-#     outputNodes = [x for x in context.scene.node_tree.nodes if x.type == 'OUTPUT_FILE']
-#     for node in outputNodes:
-#         context.scene.node_tree.nodes.remove(node)
-#     # setup new output comp nodes in comp area
-#     #n = bpy.context.scene.node_tree.nodes.new(type='CompositorNodeOutputFile')
-#     # set new node location >> n.location = ((50,50))
-#     # Get Render Layer
-#     rendLyrNodes = [x for x in context.scene.node_tree.nodes if x.type == 'R_LAYERS']
-#     if len(rendLyrNodes) ==1:
-#         rendLyrNode = rendLyrNodes[0]
-#     else:
-#         rendLyrNode = rendLyrNodes[0]
-#     # get output passes list from node or blender
-#     #rendLyrNode.outputs # all possible passes here (todo)
-#     tree = context.scene.node_tree
-#     print ("TREE:", tree)
-#     #np = rendLyrNode.viewLocation
-#     np = rendLyrNode.location # since 2.92 (above failed)
-#     iteration = 1
-#     renderPasses = {
-#         "DiffCol": context.scene.view_layers[0].use_pass_diffuse_color,
-#         "DiffDir": context.scene.view_layers[0].use_pass_diffuse_direct,
-#         "GlossCol": context.scene.view_layers[0].use_pass_glossy_color,
-#         "GlossDir": context.scene.view_layers[0].use_pass_glossy_direct,
-#         "Shadow": context.scene.view_layers[0].use_pass_shadow,
-#         "AO": context.scene.view_layers[0].use_pass_ambient_occlusion,
-#         "Mist": context.scene.view_layers[0].use_pass_mist,
-#         "Emit": context.scene.view_layers[0].use_pass_emit,
-#         "Normal": context.scene.view_layers[0].use_pass_normal,
-#         "Depth": context.scene.view_layers[0].use_pass_z
-#     }
-#     #if context.scene.view_layers[0].use_pass_diffuse_color:
-#     #    n = context.scene.node_tree.nodes.new(type='CompositorNodeOutputFile')
-#     #    tree.links.new(rendLyrNode.outputs['DiffCol'], n.inputs[0])
-#     for each in renderPasses:
-#         if renderPasses[each]:
-#             n = context.scene.node_tree.nodes.new(type='CompositorNodeOutputFile')
-#             tree.links.new(rendLyrNode.outputs[each], n.inputs[0])
-#             n.base_path =  rendDir.as_posix() + '/'+verInfo+'/'+each
-#             npx = np.x + 800
-#             npy = np.y - (iteration * 100)
-#             n.location = ((npx,npy))
-#             iteration = iteration + 1
-#     # create links
-#     # C.scene.node_tree.links.new('','')
-#     aovs = context.scene.view_layers[0].aovs
-#     for aov in aovs:
-#         print (aov.name)
-#         # create output node for AOV
-#         n = context.scene.node_tree.nodes.new(type='CompositorNodeOutputFile')
-#         tree.links.new(rendLyrNode.outputs[aov.name], n.inputs[0])
-#         n.base_path =  rendDir.as_posix() + '/'+verInfo+'/'+aov.name
-#         npx = np.x + 800
-#         npy = np.y - (iteration * 100)
-#         n.location = ((npx,npy))
-#         iteration = iteration + 1
-#     # todo fix depth reduction
-#     # todo make sure compositing is ticked
-#     # todo fix all layers ( currently 0 is hardcoded :( )
-# def renderPreviewMp4(context,res=100):
-#     ''' 
-#         this function will setup preview mp4
-#     '''
-#     pcore.projectPath
-#     pcore.scenePath # points to workflow dir
-#     pcore.shotPath # points to shots folder
-#     pcore.fileInPipeline(bpy.data.filepath)
-#     bfp = Path(bpy.data.filepath) 
-#     basefilename = bpy.path.basename(bpy.data.filepath).split('.')[0]
-#     filename = bfp.name
-#     filepath = bfp.parent
-#     shotdir = bfp.parent.parent.parent.parent
-#     stepdir = pcore.getCurrentFileName().split('/')[-2]
-#     if shotdir.is_dir():
-#         rendDir = shotdir.joinpath("Playblasts",stepdir)
-#     # now get file version string
-#     verInfo = filename.split(pcore.filenameSeparator)[4] # .sequenceSeparato
-#     verFormat = pcore.versionFormat
-    
-#     # create / output dir exists
-#     print ("Preview DIR EXPECTED PATH:", rendDir)
-#     print ("Preview DIR FOUND:", rendDir.exists())
-#     #renderer = context.scene.render.engine #.split('_')[1]
-#     rendDir = rendDir.joinpath(verInfo)
-#     rendDir.mkdir(parents=True, exist_ok=True) # will create EEVEE or CYCLES Directory
-
-#     # set relative path in output (main area)
-#     #fo = C.scene.render.filepath
-#     #bpy.path.abspath, to replace os.path.abspath
-#     #bpy.path.relpath, to replace os.path.relpath
-#     #context.scene.render.filepath = rendDir.as_posix() + '/'+verInfo+'/beauty/image_'
-#     context.scene.render.filepath = rendDir.as_posix() + '/'+ basefilename + '.mp4'
-#     context.scene.render.image_settings.file_format = 'FFMPEG'
-#     context.scene.render.ffmpeg.format = 'MPEG4'
-#     context.scene.render.ffmpeg.constant_rate_factor = 'HIGH'
-#     context.scene.render.ffmpeg.gopsize = 4
-#     context.scene.render.resolution_percentage = 50
+from .utils.render_utils import (
+    render_png_passes,
+    render_exr_passes,
+    render_playblast_mp4,
+    toggle_use_compositing
+)
 
 
-    
-def useCompositing_toggle():
-    C.scene.render.use_compositing = not C.scene.render.use_compositing
- 
-def getRenderInfo():
-    fo = C.scene.render.filepath
-    #bpy.path.abspath, to replace os.path.abspath
-    #bpy.path.relpath, to replace os.path.relpath
+# ============================================
+# OPERATORS
+# ============================================
 
-     
-def setRP_FileOuts(type='png'):
-    pass
-def updateRP_FileOuts(type='png'):
-    for node in C.scene.node_tree.nodes:
-        if node.type == 'OUTPUT_FILE':
-            no = node.base_path
+class FF_OT_PngRender(bpy.types.Operator):
+    '''Setup PNG render with passes'''
+    bl_idname = "ffrend.png_render"
+    bl_label = "PNG Render"
+    bl_options = {"REGISTER", "UNDO"}
 
-
-
-# OPERATORS HERE
-
-
-class setupPrismOutput_OT_Operator (bpy.types.Operator):
-    '''setup local png render'''
-    bl_idname = "ffrend.setup_prism_output"
-    bl_label = "ffrend_setupPrismOutput"
-    bl_options =  {"REGISTER","UNDO"}
-    '''
-    @classmethod
-    def poll(cls,context):
-        if context.area.type=='VIEW_3D':
-            if ((context.object) and context.object.type =="ARMATURE" and ('rig_id' in context.object.data)):
-                return (1)
-        else:
-            return(0)
-    '''
     def execute(self, context):
-        renderPngPasses(context)
-        self.report({'INFO'}, "Done.")
-        return{"FINISHED"}
-class setupPrismPreview_OT_Operator (bpy.types.Operator):
-    '''setup local mp4 preview'''
-    bl_idname = "ffrend.setup_prism_preview"
-    bl_label = "ffrend_setupPrismPreview"
-    bl_options =  {"REGISTER","UNDO"}
-    '''
-    @classmethod
-    def poll(cls,context):
-        if context.area.type=='VIEW_3D':
-            if ((context.object) and context.object.type =="ARMATURE" and ('rig_id' in context.object.data)):
-                return (1)
-        else:
-            return(0)
-    '''
-    def execute(self, context):
-        renderPreviewMp4(context)
-        self.report({'INFO'}, "Done.")
-        return{"FINISHED"}
+        render_png_passes(context)
+        self.report({'INFO'}, "PNG Render setup complete.")
+        return {"FINISHED"}
 
-class setupBackGroundRender_OT_Operator (bpy.types.Operator):
-    '''setup background render command'''
-    bl_idname = "ffrend.setup_bg_render"
-    bl_label = "ffrend_setupBackGroundRender"
-    bl_options =  {"REGISTER","UNDO"}
-    '''
-    @classmethod
-    def poll(cls,context):
-        if context.area.type=='VIEW_3D':
-            if ((context.object) and context.object.type =="ARMATURE" and ('rig_id' in context.object.data)):
-                return (1)
-        else:
-            return(0)
-    '''
+
+class FF_OT_ExrRender(bpy.types.Operator):
+    '''Setup EXR render with passes'''
+    bl_idname = "ffrend.exr_render"
+    bl_label = "EXR Render"
+    bl_options = {"REGISTER", "UNDO"}
+
     def execute(self, context):
-        renderPreviewMp4(context)
-        self.report({'INFO'}, "Done.")
-        return{"FINISHED"}
+        render_exr_passes(context)
+        self.report({'INFO'}, "EXR Render setup complete.")
+        return {"FINISHED"}
+
+
+class FF_OT_PlayblastMp4(bpy.types.Operator):
+    '''Setup playblast MP4'''
+    bl_idname = "ffrend.playblast_mp4"
+    bl_label = "Playblast MP4"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        render_playblast_mp4(context)
+        self.report({'INFO'}, "Playblast MP4 setup complete.")
+        return {"FINISHED"}
+
+
+class FF_OT_ToggleCompositing(bpy.types.Operator):
+    '''Toggle use compositing'''
+    bl_idname = "ffrend.toggle_compositing"
+    bl_label = "Toggle Compositing"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        toggle_use_compositing(context)
+        state = "ON" if context.scene.render.use_compositing else "OFF"
+        self.report({'INFO'}, f"Compositing {state}.")
+        return {"FINISHED"}
+
+
+class FF_OT_PrepareCharSheet(bpy.types.Operator):
+    '''Prepare character sheet: Place cameras around subject and create stitched image'''
+    bl_idname = "ffrend.prepare_char_sheet"
+    bl_label = "Prepare Character Sheet"
+    bl_options = {"REGISTER", "UNDO"}
+
+    num_cameras: bpy.props.IntProperty(
+        name="Number of Cameras",
+        description="Number of cameras to place around subject",
+        default=8,
+        min=4,
+        max=36
+    )
+
+    def execute(self, context):
+        # Get selected object
+        selected_objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
+        if not selected_objects:
+            self.report({'ERROR'}, "No mesh object selected")
+            return {'CANCELLED'}
+        
+        import math
+        
+        subject = selected_objects[0]
+        subject_location = subject.location
+        
+        # Get subject bounds for camera positioning
+        bpy.ops.object.select_all(action='DESELECT')
+        subject.select_set(True)
+        bpy.context.view_layer.objects.active = subject
+        
+        # Calculate subject dimensions from bound_box
+        bbox_corners = [Vector(corner) for corner in subject.bound_box]
+        min_x = min(corner.x for corner in bbox_corners)
+        max_x = max(corner.x for corner in bbox_corners)
+        min_y = min(corner.y for corner in bbox_corners)
+        max_y = max(corner.y for corner in bbox_corners)
+        min_z = min(corner.z for corner in bbox_corners)
+        max_z = max(corner.z for corner in bbox_corners)
+        
+        # Get dimensions
+        dim_x = max_x - min_x
+        dim_y = max_y - min_y
+        dim_z = max_z - min_z
+        max_dim = max(dim_x, dim_y, dim_z)
+        
+        # Calculate radius - enough to frame the whole subject
+        radius = max_dim * 2.0
+        
+        # Camera height at center of subject
+        camera_height = subject_location.z + (dim_z * 0.3)
+        
+        # Create collection for char sheet cameras
+        charsheet_collection = bpy.data.collections.new(f"CharSheet_{subject.name}")
+        bpy.context.scene.collection.children.link(charsheet_collection)
+        
+        # Create cameras
+        camera_images = []
+        
+        for i in range(self.num_cameras):
+            angle = (2 * pi * i) / self.num_cameras
+            
+            # Calculate camera position in circle using sin/cos
+            cam_x = subject_location.x + radius * cos(angle)
+            cam_y = subject_location.y + radius * sin(angle)
+            
+            # Create camera data
+            cam_data = bpy.data.cameras.new(name=f"Camera_{subject.name}_{i+1}")
+            cam_data.lens = 50
+            cam_data.sensor_width = 32
+            
+            # Create camera object
+            cam_obj = bpy.data.objects.new(f"Camera_{subject.name}_{i+1}", cam_data)
+            charsheet_collection.objects.link(cam_obj)
+            
+            # Position camera
+            cam_obj.location = (cam_x, cam_y, camera_height)
+            
+            # Make camera look at subject
+            cam_obj.rotation_euler = (0, 0, 0)
+            constraint = cam_obj.constraints.new(type='TRACK_TO')
+            constraint.target = subject
+            constraint.track_axis = 'TRACK_NEGATIVE_Z'
+            constraint.up_axis = 'UP_Y'
+            
+            camera_images.append((cam_obj, i + 1))
+        
+        self.report({'INFO'}, f"Created {self.num_cameras} cameras for character sheet")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
+class FF_OT_Setup360Turnaround(bpy.types.Operator):
+    '''Setup 360 degree turnaround camera around selected object'''
+    bl_idname = "ffrend.setup_360_turnaround"
+    bl_label = "Setup 360 Turnaround Camera"
+    bl_options = {"REGISTER", "UNDO"}
+
+    distance: bpy.props.FloatProperty(
+        name="Distance",
+        description="Distance from subject",
+        default=5.0,
+        min=1.0,
+        max=50.0
+    )
+
+    height: bpy.props.FloatProperty(
+        name="Height",
+        description="Camera height",
+        default=1.5,
+        min=0.1,
+        max=20.0
+    )
+
+    duration: bpy.props.IntProperty(
+        name="Duration (frames)",
+        description="Animation duration",
+        default=100,
+        min=24,
+        max=1000
+    )
+
+    def execute(self, context):
+        # Get selected object
+        selected_objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
+        if not selected_objects:
+            self.report({'ERROR'}, "No mesh object selected")
+            return {'CANCELLED'}
+        
+        subject = selected_objects[0]
+        subject_location = subject.location
+        
+        # Create camera data
+        cam_data = bpy.data.cameras.new(name=f"Turnaround_{subject.name}")
+        cam_data.lens = 35
+        cam_data.sensor_width = 32
+        
+        # Create camera object
+        camera = bpy.data.objects.new(f"Turnaround_{subject.name}", cam_data)
+        bpy.context.scene.collection.objects.link(camera)
+        
+        # Position camera at starting point
+        camera.location = (subject_location.x + self.distance, subject_location.y, subject_location.z + self.height)
+        
+        # Make camera look at subject
+        constraint = camera.constraints.new(type='TRACK_TO')
+        constraint.target = subject
+        constraint.track_axis = 'TRACK_NEGATIVE_Z'
+        constraint.up_axis = 'UP_Y'
+        
+        # Create orbit path (circle)
+        bpy.ops.curve.primitive_nurbs_circle_add(
+            radius=self.distance,
+            enter_editmode=False,
+            align='WORLD',
+            location=(subject_location.x, subject_location.y, subject_location.z + self.height)
+        )
+        path = bpy.context.active_object
+        path.name = f"OrbitPath_{subject.name}"
+        
+        # Make circle horizontal
+        path.rotation_euler = (0, 0, 0)
+        
+        # Add follow path constraint
+        path_constraint = camera.constraints.new(type='FOLLOW_PATH')
+        path_constraint.target = path
+        path_constraint.use_curve_follow = True
+        path_constraint.up_axis = 'UP_Y'
+        
+        # Animate camera along path
+        bpy.context.scene.frame_start = 1
+        bpy.context.scene.frame_end = self.duration
+        
+        # Set path animation
+        path.data.path_duration = self.duration
+        path.data.eval_time = 0
+        path.data.keyframe_insert(data_path="eval_time", frame=1)
+        path.data.eval_time = 100
+        path.data.keyframe_insert(data_path="eval_time", frame=self.duration)
+        
+        # Set camera as active
+        bpy.context.scene.camera = camera
+        
+        self.report({'INFO'}, f"360 turnaround camera setup complete")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
+# ============================================
+# PROPERTIES
+# ============================================
+
+# Asset type options
+ASSET_TYPE_ITEMS = [
+    ('model', 'Model', 'Model render'),
+    ('blocking', 'Blocking', 'Blocking render'),
+    ('sculpt', 'Sculpt', 'Sculpt render'),
+    ('shading', 'Shading', 'Shading render'),
+    ('rig', 'Rig', 'Rig render'),
+]
+
+# Shot type options
+SHOT_TYPE_ITEMS = [
+    ('element', 'Element', 'Element render'),
+    ('vfx', 'VFX', 'VFX render'),
+    ('lighting', 'Lighting', 'Lighting render'),
+    ('char', 'Character', 'Character render'),
+    ('bg', 'Background', 'Background render'),
+    ('fg', 'Foreground', 'Foreground render'),
+]
+
+
+class FF_RendProperties(bpy.types.PropertyGroup):
+    """Custom properties for FF Render tools"""
+    
+    # Render type selection (radio button behavior)
+    render_type: bpy.props.EnumProperty(
+        name="Render Type",
+        description="Select render type",
+        items=[
+            ('asset', 'Asset', 'Asset render'),
+            ('shot', 'Shot', 'Shot render'),
+        ],
+        default='asset',
+        options={'ANIMATABLE'}
+    )
+    
+    # Asset type dropdown
+    asset_type: bpy.props.EnumProperty(
+        name="Asset Type",
+        description="Select asset type",
+        items=ASSET_TYPE_ITEMS,
+        default='model',
+        options={'ANIMATABLE'}
+    )
+    
+    # Shot type dropdown
+    shot_type: bpy.props.EnumProperty(
+        name="Shot Type",
+        description="Select shot type",
+        items=SHOT_TYPE_ITEMS,
+        default='element',
+        options={'ANIMATABLE'}
+    )
+    
+    # Custom suffix input
+    custom_suffix: bpy.props.StringProperty(
+        name="Custom Suffix",
+        description="Custom suffix for output filename (auto-filled based on type selection)",
+        default="",
+        options={'ANIMATABLE'}
+    )
+    
+    # Use same directory (output path = blender file location)
+    use_same_dir: bpy.props.BoolProperty(
+        name="Use Same Directory",
+        description="Use the same output directory as blender file location",
+        default=False,
+        options={'ANIMATABLE'}
+    )
+    
+    # Use subdirectory (create subfolder based on filename)
+    use_subdir: bpy.props.BoolProperty(
+        name="Use Subdirectory",
+        description="Create subdirectory based on blender filename",
+        default=True,
+        options={'ANIMATABLE'}
+    )
+    
+    # Use file version (extract version from filename)
+    use_file_version: bpy.props.BoolProperty(
+        name="Use File Version",
+        description="Extract and use version number from blender filename",
+        default=True,
+        options={'ANIMATABLE'}
+    )
+
+
+# ============================================
+# PANELS
+# ============================================
+
+# Original N-Panel (kept for backward compatibility)
 class FfPollRend():
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
+    
     @classmethod
     def poll(cls, context):
-        return(context.scene.ff_rend == True)
+        return context.scene.ff_rend == True
+
+
 class FF_PT_Rend(FfPollRend, bpy.types.Panel):
     bl_idname = "FF_PT_Rend"
     bl_label = "Rendering"
@@ -238,20 +368,68 @@ class FF_PT_Rend(FfPollRend, bpy.types.Panel):
     bl_region_type = "UI"
 
     def draw(self, context):
-        active_obj = context.active_object
         layout = self.layout
-        # new stuff
         box = layout.box()
-        col = box.column(align = True)
-        col.label(text='PRISM ASSIST')
+        col = box.column(align=True)
+        col.label(text='CAMERA TOOLS')
         row = col.row(align=True)
-        row.operator("ffrend.setup_prism_output", text="Setup Masks AOV")
+        row.operator("ffrend.prepare_char_sheet", text="Prepare Char Sheet", icon="OUTLINER_OB_CAMERA")
         row = col.row(align=True)
-        row.operator("ffrend.setup_prism_output", text="PNG Render")
-        row = col.row(align=True)
-        row.operator("ffrend.setup_prism_output", text="EXR RENDER")
+        row.operator("ffrend.setup_360_turnaround", text="Setup 360 Turnaround", icon="CON_TRACKTO")
+
+
+# NEW: Inject buttons into existing Output Properties panel
+class FF_PT_OutputPanel(bpy.types.Panel):
+    """Inject custom render buttons into Output Properties"""
+    bl_idname = "FF_PT_OutputPanel"
+    bl_label = "FF Render Tools"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = 'output'
+    bl_order = 1  # Lower number = appears earlier in the panel
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
         
-        row = col.row(align=True)
-        row.operator("ffrend.setup_prism_preview", text="Setup Playblast mp4")
-        row = col.row(align=True)
-        row.operator("ffrend.setup_bg_render", text="BG Render Cmd")
+        # Check if properties are registered
+        if not hasattr(scene, 'ff_rend_props'):
+            layout.label(text="Properties not registered yet", icon="ERROR")
+            return
+            
+        props = scene.ff_rend_props
+        
+        # Create a box for our custom settings
+        box = layout.box()
+        box.label(text="FF Render Tools", icon="IMAGE_PLANE")
+        
+        # Row 1: Render Type + Type-specific dropdown
+        row = box.row(align=True)
+        row.prop(props, "render_type", text="")
+        if props.render_type == 'asset':
+            row.prop(props, "asset_type", text="")
+        else:
+            row.prop(props, "shot_type", text="")
+        
+        # Row 2: Custom suffix
+        row = box.row(align=True)
+        row.prop(props, "custom_suffix", text="Custom Suffix")
+        
+        # Row 3: All checkboxes in one row
+        row = box.row(align=True)
+        row.prop(props, "use_same_dir", text="Same Dir")
+        row.prop(props, "use_subdir", text="Subdir")
+        row.prop(props, "use_file_version", text="Version")
+        
+        box.separator()
+        
+        # Row 4: Render operators (PNG, EXR, Playblast)
+        row = box.row(align=True)
+        row.operator("ffrend.png_render", text="PNG", icon="IMAGE_DATA")
+        row.operator("ffrend.exr_render", text="EXR", icon="IMAGE_DATA")
+        row.operator("ffrend.playblast_mp4", text="Playblast", icon="RENDER_ANIMATION")
+
+
+# ============================================
+# REGISTRATION (handled in __init__.py)
+# ============================================
