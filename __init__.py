@@ -33,7 +33,7 @@ from . ff_rig import UseSingleSideControls_OT_Operator, SelectOneSidedObjects_OT
 from . ff_anim import CopyIklegs_OT_Operator, CopyIkArms_OT_Operator, KeySelectionOp_OT_Operator, KeyDeletionOp_OT_Operator, FF_PT_Anim
 from . ff_anim import EnableFcurveModifers_OT_Operator, EnableFcurveModifersAll_OT_Operator, DisableFcurveModifers_OT_Operator, DisableFcurveModifersAll_OT_Operator
 from . ff_anim import MirrorFcurveModifers_OT_Operator, CopyFcurveModifiers_OT_Operator
-from . ff_rend import FF_OT_PngRender, FF_OT_ExrRender, FF_OT_PlayblastMp4, FF_OT_SetupCharSheet, FF_OT_RenderCharSheet, FF_OT_Setup360Turnaround, FF_PT_Rend, FF_PT_OutputPanel
+from . ff_rend import FF_OT_PngRender, FF_OT_ExrRender, FF_OT_PlayblastMp4, FF_OT_SetupCharSheet, FF_OT_RenderCharSheet, FF_OT_RenderCharSheetViewport, FF_OT_Setup360Turnaround, FF_PT_Rend, FF_PT_OutputPanel
 
 
 from . ff_sk import SkZeroAll_OT_Operator,SkAnimateAll_OT_Operator,SkBindToBone_OT_Operator
@@ -86,7 +86,7 @@ classes = (
         DisableFcurveModifers_OT_Operator, DisableFcurveModifersAll_OT_Operator,
         MirrorFcurveModifers_OT_Operator, CopyFcurveModifiers_OT_Operator, 
         ReadFaceCapJson_OT_Operator, SetupFcBoneProps_OT_Operator,SetupFcSingleDriver_OT_Operator,SetupFcDrivers_OT_Operator,
-        FF_OT_PngRender, FF_OT_ExrRender, FF_OT_PlayblastMp4, FF_OT_SetupCharSheet, FF_OT_RenderCharSheet, FF_OT_Setup360Turnaround,
+        FF_OT_PngRender, FF_OT_ExrRender, FF_OT_PlayblastMp4, FF_OT_SetupCharSheet, FF_OT_RenderCharSheet, FF_OT_RenderCharSheetViewport, FF_OT_Setup360Turnaround,
         FF_PT_Panel, FF_PT_Model, FF_PT_Rig, FF_PT_Anim, FF_PT_Rend, FF_PT_OutputPanel)
 
 

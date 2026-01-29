@@ -173,7 +173,7 @@ class FF_OT_SetupCharSheet(bpy.types.Operator):
 
 
 class FF_OT_RenderCharSheet(bpy.types.Operator):
-    '''Capture and stitch images from CharSheet cameras'''
+    '''Capture and stitch images from CharSheet cameras using standard Scene Render settings'''
     bl_idname = "ffrend.render_char_sheet"
     bl_label = "Render CharSheet"
     bl_options = {"REGISTER", "UNDO"}
@@ -281,6 +281,118 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
                     os.remove(path)
 
             self.report({'INFO'}, f"Character sheet saved: {stitched_path}")
+
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
+class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
+    '''Capture and stitch images exactly as seen in the active Viewport'''
+    bl_idname = "ffrend.render_char_sheet_viewport"
+    bl_label = "Render CharSheet (Viewport)"
+    bl_options = {"REGISTER", "UNDO"}
+
+    stitch_images: bpy.props.BoolProperty(
+        name="Stitch Images",
+        description="Stitch captured images into one character sheet",
+        default=True
+    )
+
+    def execute(self, context):
+        if not bpy.data.filepath:
+            self.report({'ERROR'}, "Please save the .blend file first")
+            return {'CANCELLED'}
+
+        from datetime import datetime
+        from PIL import Image
+        import os
+
+        # Find camera collection
+        charsheet_collection = None
+        if "CharSheet" in context.collection.name:
+            charsheet_collection = context.collection
+        else:
+            for coll in bpy.data.collections:
+                if "CharSheet" in coll.name:
+                    charsheet_collection = coll
+                    break
+        
+        if not charsheet_collection:
+            self.report({'ERROR'}, "No 'CharSheet' collection found.")
+            return {'CANCELLED'}
+
+        camera_objs = [obj for obj in charsheet_collection.objects if obj.type == 'CAMERA']
+        if not camera_objs:
+            self.report({'ERROR'}, "No cameras found.")
+            return {'CANCELLED'}
+
+        camera_objs.sort(key=lambda o: o.name)
+
+        # Store original settings
+        original_camera = context.scene.camera
+        original_filepath = context.scene.render.filepath
+        
+        # Get the 3D area to force camera view
+        area_3d = None
+        for area in context.screen.areas:
+            if area.type == 'VIEW_3D':
+                area_3d = area
+                break
+        
+        if not area_3d:
+            self.report({'ERROR'}, "No 3D Viewport found.")
+            return {'CANCELLED'}
+
+        rv3d = area_3d.spaces.active.region_3d
+        original_view_perspective = rv3d.view_perspective
+
+        output_dir = Path(bpy.path.abspath("//")) / f"{charsheet_collection.name}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        captured_paths = []
+        
+        for i, cam_obj in enumerate(camera_objs):
+            context.scene.camera = cam_obj
+            rv3d.view_perspective = 'CAMERA'
+
+            output_path = output_dir / f"v_cam_{i+1:03d}.png"
+            context.scene.render.filepath = str(output_path)
+
+            # Viewport Render - use 'view_context=True' to capture exactly what's visible
+            bpy.ops.render.opengl(write_still=True, view_context=True)
+            captured_paths.append(str(output_path))
+
+            self.report({'INFO'}, f"Captured viewport camera {i+1}/{len(camera_objs)}")
+
+        # Restore
+        context.scene.camera = original_camera
+        context.scene.render.filepath = original_filepath
+        rv3d.view_perspective = original_view_perspective
+
+        # Stitching
+        if self.stitch_images and len(captured_paths) > 0:
+            self.report({'INFO'}, "Stitching images...")
+            images = [Image.open(path) for path in captured_paths]
+            total_width = sum(img.width for img in images)
+            max_height = max(img.height for img in images)
+            stitched = Image.new('RGB', (total_width, max_height))
+            x_offset = 0
+            for img in images:
+                stitched.paste(img, (x_offset, 0))
+                x_offset += img.width
+            
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            stitched_filename = f"{charsheet_collection.name}_Viewport_{timestamp}.png"
+            stitched_path = output_dir / stitched_filename
+            stitched.save(str(stitched_path))
+
+            for path in captured_paths:
+                if os.path.exists(path):
+                    os.remove(path)
+
+            self.report({'INFO'}, f"Viewport character sheet saved: {stitched_path}")
 
         return {"FINISHED"}
 
@@ -501,11 +613,16 @@ class FF_PT_Rend(FfPollRend, bpy.types.Panel):
         layout = self.layout
         box = layout.box()
         col = box.column(align=True)
-        col.label(text='CAMERA TOOLS')
+        col.label(text='Char Sheet')
         row = col.row(align=True)
-        row.operator("ffrend.setup_char_sheet", text="Setup CharSheet", icon="OUTLINER_OB_CAMERA")
+        row.operator("ffrend.setup_char_sheet", text="Setup", icon="OUTLINER_OB_CAMERA")
         row = col.row(align=True)
-        row.operator("ffrend.render_char_sheet", text="Render CharSheet", icon="IMAGE_DATA")
+        row.operator("ffrend.render_char_sheet", text="Render OpenGL", icon="IMAGE_DATA")
+        row = col.row(align=True)
+        row.operator("ffrend.render_char_sheet_viewport", text="Render Viewport", icon="SCENE")
+        # ANIMATED CAMERA
+        col = box.column(align=True)
+        col.label(text='360 Turnaround')
         row = col.row(align=True)
         row.operator("ffrend.setup_360_turnaround", text="Setup 360 Turnaround", icon="CON_TRACKTO")
 
