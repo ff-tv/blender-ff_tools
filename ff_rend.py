@@ -64,10 +64,10 @@ class FF_OT_ToggleCompositing(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class FF_OT_PrepareCharSheet(bpy.types.Operator):
-    '''Prepare character sheet: Place cameras around subject, capture and stitch images'''
-    bl_idname = "ffrend.prepare_char_sheet"
-    bl_label = "Prepare Character Sheet"
+class FF_OT_SetupCharSheet(bpy.types.Operator):
+    '''Setup character sheet: Place cameras around subject'''
+    bl_idname = "ffrend.setup_char_sheet"
+    bl_label = "Setup CharSheet"
     bl_options = {"REGISTER", "UNDO"}
 
     num_cameras: bpy.props.IntProperty(
@@ -76,34 +76,6 @@ class FF_OT_PrepareCharSheet(bpy.types.Operator):
         default=8,
         min=4,
         max=36
-    )
-
-    resolution_x: bpy.props.IntProperty(
-        name="Resolution X",
-        description="Image width per camera",
-        default=1024,
-        min=256,
-        max=4096
-    )
-
-    resolution_y: bpy.props.IntProperty(
-        name="Resolution Y",
-        description="Image height per camera",
-        default=1024,
-        min=256,
-        max=4096
-    )
-
-    capture_cameras: bpy.props.BoolProperty(
-        name="Capture Cameras",
-        description="Capture viewport render from each camera",
-        default=True
-    )
-
-    stitch_images: bpy.props.BoolProperty(
-        name="Stitch Images",
-        description="Stitch captured images into one character sheet",
-        default=True
     )
 
     def execute(self, context):
@@ -117,10 +89,6 @@ class FF_OT_PrepareCharSheet(bpy.types.Operator):
         if not selected_objects:
             self.report({'ERROR'}, "No mesh object selected")
             return {'CANCELLED'}
-
-        from datetime import datetime
-        from PIL import Image
-        import os
 
         subject = selected_objects[0]
         subject_location = subject.location
@@ -150,128 +118,170 @@ class FF_OT_PrepareCharSheet(bpy.types.Operator):
 
         # Camera height at center of subject
         camera_height = subject_location.z + (dim_z * 0.3)
-
-        # Create output directory path first (before camera creation)
-        output_dir = Path(bpy.path.abspath("//")) / f"CharSheet_{subject.name}"
-        output_dir.mkdir(parents=True, exist_ok=True)
+        target_location = (subject_location.x, subject_location.y, camera_height)
 
         # Check if camera collection already exists
         charsheet_collection_name = f"CharSheet_{subject.name}"
         charsheet_collection = bpy.data.collections.get(charsheet_collection_name)
 
         if charsheet_collection:
-            # Collection exists - reuse existing cameras
-            self.report({'INFO'}, "Reusing existing cameras from collection")
-            # Get camera objects from collection
-            camera_objs = [obj for obj in charsheet_collection.objects if obj.type == 'CAMERA']
-            if not camera_objs:
-                self.report({'ERROR'}, "No cameras found in existing collection")
-                return {'CANCELLED'}
+            self.report({'INFO'}, f"Collection '{charsheet_collection_name}' already exists.")
+            return {"FINISHED"}
+            
+        # Create new collection and cameras
+        charsheet_collection = bpy.data.collections.new(charsheet_collection_name)
+        bpy.context.scene.collection.children.link(charsheet_collection)
+
+        # Create target empty
+        target_empty = bpy.data.objects.new(f"Target_{subject.name}", None)
+        target_empty.empty_display_type = 'PLAIN_AXES'
+        target_empty.location = target_location
+        charsheet_collection.objects.link(target_empty)
+
+        # Create cameras
+        for i in range(self.num_cameras):
+            angle = (2 * pi * i) / self.num_cameras
+
+            # Calculate camera position in circle using sin/cos
+            cam_x = subject_location.x + radius * cos(angle)
+            cam_y = subject_location.y + radius * sin(angle)
+
+            # Create camera data
+            cam_data = bpy.data.cameras.new(name=f"Camera_{subject.name}_{i+1}")
+            cam_data.lens = 50
+            cam_data.sensor_width = 32
+
+            # Create camera object
+            cam_obj = bpy.data.objects.new(f"Camera_{subject.name}_{i+1}", cam_data)
+            charsheet_collection.objects.link(cam_obj)
+
+            # Position camera
+            cam_obj.location = (cam_x, cam_y, camera_height)
+
+            # Make camera look at target empty
+            cam_obj.rotation_euler = (0, 0, 0)
+            constraint = cam_obj.constraints.new(type='TRACK_TO')
+            constraint.target = target_empty
+            constraint.track_axis = 'TRACK_NEGATIVE_Z'
+            constraint.up_axis = 'UP_Y'
+
+        self.report({'INFO'}, f"Setup complete with {self.num_cameras} cameras")
+        return {"FINISHED"}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+
+class FF_OT_RenderCharSheet(bpy.types.Operator):
+    '''Capture and stitch images from CharSheet cameras'''
+    bl_idname = "ffrend.render_char_sheet"
+    bl_label = "Render CharSheet"
+    bl_options = {"REGISTER", "UNDO"}
+
+    stitch_images: bpy.props.BoolProperty(
+        name="Stitch Images",
+        description="Stitch captured images into one character sheet",
+        default=True
+    )
+
+    def execute(self, context):
+        # Check if file is saved
+        if not bpy.data.filepath:
+            self.report({'ERROR'}, "Please save the .blend file first")
+            return {'CANCELLED'}
+
+        from datetime import datetime
+        from PIL import Image
+        import os
+
+        # Find camera collection
+        charsheet_collection = None
+        # Try active collection first if it has "CharSheet" in name
+        if "CharSheet" in context.collection.name:
+            charsheet_collection = context.collection
         else:
-            # Create new collection and cameras
-            charsheet_collection = bpy.data.collections.new(charsheet_collection_name)
-            bpy.context.scene.collection.children.link(charsheet_collection)
+            # Look for any collection with CharSheet in name
+            for coll in bpy.data.collections:
+                if "CharSheet" in coll.name:
+                    charsheet_collection = coll
+                    break
+        
+        if not charsheet_collection:
+            self.report({'ERROR'}, "No 'CharSheet' collection found. Please run Setup CharSheet first.")
+            return {'CANCELLED'}
 
-            # Create cameras
-            camera_objs = []
+        # Get camera objects from collection
+        camera_objs = [obj for obj in charsheet_collection.objects if obj.type == 'CAMERA']
+        if not camera_objs:
+            self.report({'ERROR'}, f"No cameras found in collection '{charsheet_collection.name}'")
+            return {'CANCELLED'}
 
-            for i in range(self.num_cameras):
-                angle = (2 * pi * i) / self.num_cameras
+        # Sort cameras by name to ensure consistent order
+        camera_objs.sort(key=lambda o: o.name)
 
-                # Calculate camera position in circle using sin/cos
-                cam_x = subject_location.x + radius * cos(angle)
-                cam_y = subject_location.y + radius * sin(angle)
+        # Store original camera and settings
+        original_camera = context.scene.camera
+        original_filepath = context.scene.render.filepath
 
-                # Create camera data
-                cam_data = bpy.data.cameras.new(name=f"Camera_{subject.name}_{i+1}")
-                cam_data.lens = 50
-                cam_data.sensor_width = 32
+        # Output directory is the collection name
+        output_dir = Path(bpy.path.abspath("//")) / charsheet_collection.name
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-                # Create camera object
-                cam_obj = bpy.data.objects.new(f"Camera_{subject.name}_{i+1}", cam_data)
-                charsheet_collection.objects.link(cam_obj)
+        # Capture from each camera
+        captured_paths = []
+        for i, cam_obj in enumerate(camera_objs):
+            # Set camera as active
+            context.scene.camera = cam_obj
 
-                # Position camera
-                cam_obj.location = (cam_x, cam_y, camera_height)
+            # Set output path
+            output_path = output_dir / f"cam_{i+1:03d}.png"
+            context.scene.render.filepath = str(output_path)
 
-                # Make camera look at subject
-                cam_obj.rotation_euler = (0, 0, 0)
-                constraint = cam_obj.constraints.new(type='TRACK_TO')
-                constraint.target = subject
-                constraint.track_axis = 'TRACK_NEGATIVE_Z'
-                constraint.up_axis = 'UP_Y'
+            # OpenGL render - capture as is
+            bpy.ops.render.opengl(write_still=True, view_context=False)
+            captured_paths.append(str(output_path))
 
-                camera_objs.append(cam_obj)
+            self.report({'INFO'}, f"Captured camera {i+1}/{len(camera_objs)}")
 
-        # Capture images from each camera
-        if self.capture_cameras:
-            # Store original camera and settings
-            original_camera = context.scene.camera
-            original_res_x = context.scene.render.resolution_x
-            original_res_y = context.scene.render.resolution_y
-            original_filepath = context.scene.render.filepath
+        # Restore original settings
+        context.scene.camera = original_camera
+        context.scene.render.filepath = original_filepath
 
-            # Set render settings
-            context.scene.render.resolution_x = self.resolution_x
-            context.scene.render.resolution_y = self.resolution_y
+        # Stitch images if requested
+        if self.stitch_images and len(captured_paths) > 0:
+            self.report({'INFO'}, "Stitching images...")
 
-            # Capture from each camera
-            captured_paths = []
-            for i, cam_obj in enumerate(camera_objs):
-                # Set camera as active
-                context.scene.camera = cam_obj
+            # Load all images
+            images = [Image.open(path) for path in captured_paths]
 
-                # Set output path
-                output_path = output_dir / f"cam_{i+1:03d}.png"
-                context.scene.render.filepath = str(output_path)
+            # Calculate dimensions
+            total_width = sum(img.width for img in images)
+            max_height = max(img.height for img in images)
 
-                # OpenGL render
-                bpy.ops.render.opengl(write_still=True, view_context=False)
-                captured_paths.append(str(output_path))
+            # Create stitched image
+            stitched = Image.new('RGB', (total_width, max_height))
 
-                self.report({'INFO'}, f"Captured camera {i+1}/{len(camera_objs)}")
+            # Paste each image
+            x_offset = 0
+            for img in images:
+                stitched.paste(img, (x_offset, 0))
+                x_offset += img.width
 
-            # Restore original camera
-            context.scene.camera = original_camera
-            context.scene.render.resolution_x = original_res_x
-            context.scene.render.resolution_y = original_res_y
-            context.scene.render.filepath = original_filepath
+            # Generate timestamp suffix
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-            # Stitch images if requested
-            if self.stitch_images and len(captured_paths) > 0:
-                self.report({'INFO'}, "Stitching images...")
+            # Save stitched result with timestamp
+            stitched_filename = f"{charsheet_collection.name}_{timestamp}.png"
+            stitched_path = output_dir / stitched_filename
+            stitched.save(str(stitched_path))
 
-                # Load all images
-                images = [Image.open(path) for path in captured_paths]
+            # Remove individual camera images
+            for path in captured_paths:
+                if os.path.exists(path):
+                    os.remove(path)
 
-                # Calculate dimensions
-                total_width = sum(img.width for img in images)
-                max_height = max(img.height for img in images)
+            self.report({'INFO'}, f"Character sheet saved: {stitched_path}")
 
-                # Create stitched image
-                stitched = Image.new('RGB', (total_width, max_height))
-
-                # Paste each image
-                x_offset = 0
-                for img in images:
-                    stitched.paste(img, (x_offset, 0))
-                    x_offset += img.width
-
-                # Generate timestamp suffix
-                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
-                # Save stitched result with timestamp
-                stitched_path = output_dir / f"CharSheet_{subject.name}_{timestamp}.png"
-                stitched.save(str(stitched_path))
-
-                # Remove individual camera images
-                for path in captured_paths:
-                    if os.path.exists(path):
-                        os.remove(path)
-
-                self.report({'INFO'}, f"Character sheet saved: {stitched_path}")
-
-        self.report({'INFO'}, f"Character sheet complete with {len(camera_objs)} cameras")
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -493,7 +503,9 @@ class FF_PT_Rend(FfPollRend, bpy.types.Panel):
         col = box.column(align=True)
         col.label(text='CAMERA TOOLS')
         row = col.row(align=True)
-        row.operator("ffrend.prepare_char_sheet", text="Prepare Char Sheet", icon="OUTLINER_OB_CAMERA")
+        row.operator("ffrend.setup_char_sheet", text="Setup CharSheet", icon="OUTLINER_OB_CAMERA")
+        row = col.row(align=True)
+        row.operator("ffrend.render_char_sheet", text="Render CharSheet", icon="IMAGE_DATA")
         row = col.row(align=True)
         row.operator("ffrend.setup_360_turnaround", text="Setup 360 Turnaround", icon="CON_TRACKTO")
 
