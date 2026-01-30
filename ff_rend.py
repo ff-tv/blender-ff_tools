@@ -7,7 +7,7 @@ from .utils.render_utils import (
     render_png_passes,
     render_exr_passes,
     render_playblast_mp4,
-    toggle_use_compositing
+    toggle_use_compositing,
 )
 
 
@@ -15,44 +15,49 @@ from .utils.render_utils import (
 # OPERATORS
 # ============================================
 
+
 class FF_OT_PngRender(bpy.types.Operator):
-    '''Setup PNG render with passes'''
+    """Setup PNG render with passes"""
+
     bl_idname = "ffrend.png_render"
     bl_label = "PNG Render"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         render_png_passes(context)
-        self.report({'INFO'}, "PNG Render setup complete.")
+        self.report({"INFO"}, "PNG Render setup complete.")
         return {"FINISHED"}
 
 
 class FF_OT_ExrRender(bpy.types.Operator):
-    '''Setup EXR render with passes'''
+    """Setup EXR render with passes"""
+
     bl_idname = "ffrend.exr_render"
     bl_label = "EXR Render"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         render_exr_passes(context)
-        self.report({'INFO'}, "EXR Render setup complete.")
+        self.report({"INFO"}, "EXR Render setup complete.")
         return {"FINISHED"}
 
 
 class FF_OT_PlayblastMp4(bpy.types.Operator):
-    '''Setup playblast MP4'''
+    """Setup playblast MP4"""
+
     bl_idname = "ffrend.playblast_mp4"
     bl_label = "Playblast MP4"
     bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         render_playblast_mp4(context)
-        self.report({'INFO'}, "Playblast MP4 setup complete.")
+        self.report({"INFO"}, "Playblast MP4 setup complete.")
         return {"FINISHED"}
 
 
 class FF_OT_ToggleCompositing(bpy.types.Operator):
-    '''Toggle use compositing'''
+    """Toggle use compositing"""
+
     bl_idname = "ffrend.toggle_compositing"
     bl_label = "Toggle Compositing"
     bl_options = {"REGISTER", "UNDO"}
@@ -60,12 +65,13 @@ class FF_OT_ToggleCompositing(bpy.types.Operator):
     def execute(self, context):
         toggle_use_compositing(context)
         state = "ON" if context.scene.render.use_compositing else "OFF"
-        self.report({'INFO'}, f"Compositing {state}.")
+        self.report({"INFO"}, f"Compositing {state}.")
         return {"FINISHED"}
 
 
 class FF_OT_SetupCharSheet(bpy.types.Operator):
-    '''Setup character sheet: Place cameras around subject'''
+    """Setup character sheet: Place cameras around subject"""
+
     bl_idname = "ffrend.setup_char_sheet"
     bl_label = "Setup CharSheet"
     bl_options = {"REGISTER", "UNDO"}
@@ -75,26 +81,28 @@ class FF_OT_SetupCharSheet(bpy.types.Operator):
         description="Number of cameras to place around subject",
         default=8,
         min=4,
-        max=36
+        max=36,
     )
 
     def execute(self, context):
         # Check if file is saved
         if not bpy.data.filepath:
-            self.report({'ERROR'}, "Please save the .blend file first")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, "Please save the .blend file first")
+            return {"CANCELLED"}
 
         # Get selected object
-        selected_objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
+        selected_objects = [
+            obj for obj in context.selected_objects if obj.type == "MESH"
+        ]
         if not selected_objects:
-            self.report({'ERROR'}, "No mesh object selected")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, "No mesh object selected")
+            return {"CANCELLED"}
 
         subject = selected_objects[0]
         subject_location = subject.location
 
         # Get subject bounds for camera positioning
-        bpy.ops.object.select_all(action='DESELECT')
+        bpy.ops.object.select_all(action="DESELECT")
         subject.select_set(True)
         bpy.context.view_layer.objects.active = subject
 
@@ -125,16 +133,18 @@ class FF_OT_SetupCharSheet(bpy.types.Operator):
         charsheet_collection = bpy.data.collections.get(charsheet_collection_name)
 
         if charsheet_collection:
-            self.report({'INFO'}, f"Collection '{charsheet_collection_name}' already exists.")
+            self.report(
+                {"INFO"}, f"Collection '{charsheet_collection_name}' already exists."
+            )
             return {"FINISHED"}
-            
+
         # Create new collection and cameras
         charsheet_collection = bpy.data.collections.new(charsheet_collection_name)
         bpy.context.scene.collection.children.link(charsheet_collection)
 
         # Create target empty
         target_empty = bpy.data.objects.new(f"Target_{subject.name}", None)
-        target_empty.empty_display_type = 'PLAIN_AXES'
+        target_empty.empty_display_type = "PLAIN_AXES"
         target_empty.location = target_location
         charsheet_collection.objects.link(target_empty)
 
@@ -147,12 +157,12 @@ class FF_OT_SetupCharSheet(bpy.types.Operator):
             cam_y = subject_location.y + radius * sin(angle)
 
             # Create camera data
-            cam_data = bpy.data.cameras.new(name=f"Camera_{subject.name}_{i+1}")
+            cam_data = bpy.data.cameras.new(name=f"Camera_{subject.name}_{i + 1}")
             cam_data.lens = 50
             cam_data.sensor_width = 32
 
             # Create camera object
-            cam_obj = bpy.data.objects.new(f"Camera_{subject.name}_{i+1}", cam_data)
+            cam_obj = bpy.data.objects.new(f"Camera_{subject.name}_{i + 1}", cam_data)
             charsheet_collection.objects.link(cam_obj)
 
             # Position camera
@@ -160,12 +170,12 @@ class FF_OT_SetupCharSheet(bpy.types.Operator):
 
             # Make camera look at target empty
             cam_obj.rotation_euler = (0, 0, 0)
-            constraint = cam_obj.constraints.new(type='TRACK_TO')
+            constraint = cam_obj.constraints.new(type="TRACK_TO")
             constraint.target = target_empty
-            constraint.track_axis = 'TRACK_NEGATIVE_Z'
-            constraint.up_axis = 'UP_Y'
+            constraint.track_axis = "TRACK_NEGATIVE_Z"
+            constraint.up_axis = "UP_Y"
 
-        self.report({'INFO'}, f"Setup complete with {self.num_cameras} cameras")
+        self.report({"INFO"}, f"Setup complete with {self.num_cameras} cameras")
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -173,7 +183,8 @@ class FF_OT_SetupCharSheet(bpy.types.Operator):
 
 
 class FF_OT_RenderCharSheet(bpy.types.Operator):
-    '''Capture and stitch images from CharSheet cameras using standard Scene Render settings'''
+    """Capture and stitch images from CharSheet cameras using standard Scene Render settings"""
+
     bl_idname = "ffrend.render_char_sheet"
     bl_label = "Render CharSheet"
     bl_options = {"REGISTER", "UNDO"}
@@ -181,14 +192,14 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
     stitch_images: bpy.props.BoolProperty(
         name="Stitch Images",
         description="Stitch captured images into one character sheet",
-        default=True
+        default=True,
     )
 
     def execute(self, context):
         # Check if file is saved
         if not bpy.data.filepath:
-            self.report({'ERROR'}, "Please save the .blend file first")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, "Please save the .blend file first")
+            return {"CANCELLED"}
 
         from datetime import datetime
         from PIL import Image
@@ -205,16 +216,24 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
                 if "CharSheet" in coll.name:
                     charsheet_collection = coll
                     break
-        
+
         if not charsheet_collection:
-            self.report({'ERROR'}, "No 'CharSheet' collection found. Please run Setup CharSheet first.")
-            return {'CANCELLED'}
+            self.report(
+                {"ERROR"},
+                "No 'CharSheet' collection found. Please run Setup CharSheet first.",
+            )
+            return {"CANCELLED"}
 
         # Get camera objects from collection
-        camera_objs = [obj for obj in charsheet_collection.objects if obj.type == 'CAMERA']
+        camera_objs = [
+            obj for obj in charsheet_collection.objects if obj.type == "CAMERA"
+        ]
         if not camera_objs:
-            self.report({'ERROR'}, f"No cameras found in collection '{charsheet_collection.name}'")
-            return {'CANCELLED'}
+            self.report(
+                {"ERROR"},
+                f"No cameras found in collection '{charsheet_collection.name}'",
+            )
+            return {"CANCELLED"}
 
         # Sort cameras by name to ensure consistent order
         camera_objs.sort(key=lambda o: o.name)
@@ -234,14 +253,14 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
             context.scene.camera = cam_obj
 
             # Set output path
-            output_path = output_dir / f"cam_{i+1:03d}.png"
+            output_path = output_dir / f"cam_{i + 1:03d}.png"
             context.scene.render.filepath = str(output_path)
 
             # OpenGL render - capture as is
             bpy.ops.render.opengl(write_still=True, view_context=False)
             captured_paths.append(str(output_path))
 
-            self.report({'INFO'}, f"Captured camera {i+1}/{len(camera_objs)}")
+            self.report({"INFO"}, f"Captured camera {i + 1}/{len(camera_objs)}")
 
         # Restore original settings
         context.scene.camera = original_camera
@@ -249,7 +268,7 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
 
         # Stitch images if requested
         if self.stitch_images and len(captured_paths) > 0:
-            self.report({'INFO'}, "Stitching images...")
+            self.report({"INFO"}, "Stitching images...")
 
             # Load all images
             images = [Image.open(path) for path in captured_paths]
@@ -259,7 +278,7 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
             max_height = max(img.height for img in images)
 
             # Create stitched image
-            stitched = Image.new('RGB', (total_width, max_height))
+            stitched = Image.new("RGB", (total_width, max_height))
 
             # Paste each image
             x_offset = 0
@@ -280,7 +299,7 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
                 if os.path.exists(path):
                     os.remove(path)
 
-            self.report({'INFO'}, f"Character sheet saved: {stitched_path}")
+            self.report({"INFO"}, f"Character sheet saved: {stitched_path}")
 
         return {"FINISHED"}
 
@@ -289,7 +308,8 @@ class FF_OT_RenderCharSheet(bpy.types.Operator):
 
 
 class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
-    '''Capture and stitch images exactly as seen in the active Viewport'''
+    """Capture and stitch images exactly as seen in the active Viewport"""
+
     bl_idname = "ffrend.render_char_sheet_viewport"
     bl_label = "Render CharSheet (Viewport)"
     bl_options = {"REGISTER", "UNDO"}
@@ -297,13 +317,13 @@ class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
     stitch_images: bpy.props.BoolProperty(
         name="Stitch Images",
         description="Stitch captured images into one character sheet",
-        default=True
+        default=True,
     )
 
     def execute(self, context):
         if not bpy.data.filepath:
-            self.report({'ERROR'}, "Please save the .blend file first")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, "Please save the .blend file first")
+            return {"CANCELLED"}
 
         from datetime import datetime
         from PIL import Image
@@ -318,32 +338,34 @@ class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
                 if "CharSheet" in coll.name:
                     charsheet_collection = coll
                     break
-        
-        if not charsheet_collection:
-            self.report({'ERROR'}, "No 'CharSheet' collection found.")
-            return {'CANCELLED'}
 
-        camera_objs = [obj for obj in charsheet_collection.objects if obj.type == 'CAMERA']
+        if not charsheet_collection:
+            self.report({"ERROR"}, "No 'CharSheet' collection found.")
+            return {"CANCELLED"}
+
+        camera_objs = [
+            obj for obj in charsheet_collection.objects if obj.type == "CAMERA"
+        ]
         if not camera_objs:
-            self.report({'ERROR'}, "No cameras found.")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, "No cameras found.")
+            return {"CANCELLED"}
 
         camera_objs.sort(key=lambda o: o.name)
 
         # Store original settings
         original_camera = context.scene.camera
         original_filepath = context.scene.render.filepath
-        
+
         # Get the 3D area to force camera view
         area_3d = None
         for area in context.screen.areas:
-            if area.type == 'VIEW_3D':
+            if area.type == "VIEW_3D":
                 area_3d = area
                 break
-        
+
         if not area_3d:
-            self.report({'ERROR'}, "No 3D Viewport found.")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, "No 3D Viewport found.")
+            return {"CANCELLED"}
 
         rv3d = area_3d.spaces.active.region_3d
         original_view_perspective = rv3d.view_perspective
@@ -352,19 +374,21 @@ class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         captured_paths = []
-        
+
         for i, cam_obj in enumerate(camera_objs):
             context.scene.camera = cam_obj
-            rv3d.view_perspective = 'CAMERA'
+            rv3d.view_perspective = "CAMERA"
 
-            output_path = output_dir / f"v_cam_{i+1:03d}.png"
+            output_path = output_dir / f"v_cam_{i + 1:03d}.png"
             context.scene.render.filepath = str(output_path)
 
             # Viewport Render - use 'view_context=True' to capture exactly what's visible
             bpy.ops.render.opengl(write_still=True, view_context=True)
             captured_paths.append(str(output_path))
 
-            self.report({'INFO'}, f"Captured viewport camera {i+1}/{len(camera_objs)}")
+            self.report(
+                {"INFO"}, f"Captured viewport camera {i + 1}/{len(camera_objs)}"
+            )
 
         # Restore
         context.scene.camera = original_camera
@@ -373,18 +397,18 @@ class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
 
         # Stitching
         if self.stitch_images and len(captured_paths) > 0:
-            self.report({'INFO'}, "Stitching images...")
+            self.report({"INFO"}, "Stitching images...")
             images = [Image.open(path) for path in captured_paths]
             total_width = sum(img.width for img in images)
             max_height = max(img.height for img in images)
-            stitched = Image.new('RGB', (total_width, max_height))
+            stitched = Image.new("RGB", (total_width, max_height))
             x_offset = 0
             for img in images:
                 stitched.paste(img, (x_offset, 0))
                 x_offset += img.width
-            
+
             timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            stitched_filename = f"{charsheet_collection.name}_Viewport_{timestamp}.png"
+            stitched_filename = f"{charsheet_collection.name}_{timestamp}.png"
             stitched_path = output_dir / stitched_filename
             stitched.save(str(stitched_path))
 
@@ -392,7 +416,7 @@ class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
                 if os.path.exists(path):
                     os.remove(path)
 
-            self.report({'INFO'}, f"Viewport character sheet saved: {stitched_path}")
+            self.report({"INFO"}, f"Viewport character sheet saved: {stitched_path}")
 
         return {"FINISHED"}
 
@@ -401,7 +425,8 @@ class FF_OT_RenderCharSheetViewport(bpy.types.Operator):
 
 
 class FF_OT_Setup360Turnaround(bpy.types.Operator):
-    '''Setup 360 degree turnaround camera around selected object'''
+    """Setup 360 degree turnaround camera around selected object"""
+
     bl_idname = "ffrend.setup_360_turnaround"
     bl_label = "Setup 360 Turnaround Camera"
     bl_options = {"REGISTER", "UNDO"}
@@ -411,15 +436,11 @@ class FF_OT_Setup360Turnaround(bpy.types.Operator):
         description="Distance from subject",
         default=5.0,
         min=1.0,
-        max=50.0
+        max=50.0,
     )
 
     height: bpy.props.FloatProperty(
-        name="Height",
-        description="Camera height",
-        default=1.5,
-        min=0.1,
-        max=20.0
+        name="Height", description="Camera height", default=1.5, min=0.1, max=20.0
     )
 
     duration: bpy.props.IntProperty(
@@ -427,71 +448,81 @@ class FF_OT_Setup360Turnaround(bpy.types.Operator):
         description="Animation duration",
         default=100,
         min=24,
-        max=1000
+        max=1000,
     )
 
     def execute(self, context):
         # Get selected object
-        selected_objects = [obj for obj in context.selected_objects if obj.type == 'MESH']
+        selected_objects = [
+            obj for obj in context.selected_objects if obj.type == "MESH"
+        ]
         if not selected_objects:
-            self.report({'ERROR'}, "No mesh object selected")
-            return {'CANCELLED'}
-        
+            self.report({"ERROR"}, "No mesh object selected")
+            return {"CANCELLED"}
+
         subject = selected_objects[0]
         subject_location = subject.location
-        
+
         # Create camera data
         cam_data = bpy.data.cameras.new(name=f"Turnaround_{subject.name}")
         cam_data.lens = 35
         cam_data.sensor_width = 32
-        
+
         # Create camera object
         camera = bpy.data.objects.new(f"Turnaround_{subject.name}", cam_data)
         bpy.context.scene.collection.objects.link(camera)
-        
+
         # Position camera at starting point
-        camera.location = (subject_location.x + self.distance, subject_location.y, subject_location.z + self.height)
-        
+        camera.location = (
+            subject_location.x + self.distance,
+            subject_location.y,
+            subject_location.z + self.height,
+        )
+
         # Make camera look at subject
-        constraint = camera.constraints.new(type='TRACK_TO')
+        constraint = camera.constraints.new(type="TRACK_TO")
         constraint.target = subject
-        constraint.track_axis = 'TRACK_NEGATIVE_Z'
-        constraint.up_axis = 'UP_Y'
-        
+        constraint.track_axis = "TRACK_NEGATIVE_Z"
+        constraint.up_axis = "UP_Y"
+
         # Create orbit path (circle)
         bpy.ops.curve.primitive_nurbs_circle_add(
             radius=self.distance,
             enter_editmode=False,
-            align='WORLD',
-            location=(subject_location.x, subject_location.y, subject_location.z + self.height)
+            align="WORLD",
+            location=(
+                subject_location.x,
+                subject_location.y,
+                subject_location.z + self.height,
+            ),
         )
         path = bpy.context.active_object
         path.name = f"OrbitPath_{subject.name}"
-        
+
         # Make circle horizontal
         path.rotation_euler = (0, 0, 0)
-        
+
         # Add follow path constraint
-        path_constraint = camera.constraints.new(type='FOLLOW_PATH')
+        path_constraint = camera.constraints.new(type="FOLLOW_PATH")
         path_constraint.target = path
         path_constraint.use_curve_follow = True
-        path_constraint.up_axis = 'UP_Y'
-        
+        path_constraint.up_axis = "UP_Y"
+
         # Animate camera along path
         bpy.context.scene.frame_start = 1
         bpy.context.scene.frame_end = self.duration
-        
+
         # Set path animation
         path.data.path_duration = self.duration
         path.data.eval_time = 0
         path.data.keyframe_insert(data_path="eval_time", frame=1)
         path.data.eval_time = 100
         path.data.keyframe_insert(data_path="eval_time", frame=self.duration)
-        
+
         # Set camera as active
         bpy.context.scene.camera = camera
-        
-        self.report({'INFO'}, f"360 turnaround camera setup complete")
+
+        self.report({"INFO"}, f"360 turnaround camera setup complete")
         return {"FINISHED"}
 
     def invoke(self, context, event):
@@ -504,87 +535,87 @@ class FF_OT_Setup360Turnaround(bpy.types.Operator):
 
 # Asset type options
 ASSET_TYPE_ITEMS = [
-    ('model', 'Model', 'Model render'),
-    ('blocking', 'Blocking', 'Blocking render'),
-    ('sculpt', 'Sculpt', 'Sculpt render'),
-    ('shading', 'Shading', 'Shading render'),
-    ('rig', 'Rig', 'Rig render'),
+    ("model", "Model", "Model render"),
+    ("blocking", "Blocking", "Blocking render"),
+    ("sculpt", "Sculpt", "Sculpt render"),
+    ("shading", "Shading", "Shading render"),
+    ("rig", "Rig", "Rig render"),
 ]
 
 # Shot type options
 SHOT_TYPE_ITEMS = [
-    ('element', 'Element', 'Element render'),
-    ('vfx', 'VFX', 'VFX render'),
-    ('lighting', 'Lighting', 'Lighting render'),
-    ('char', 'Character', 'Character render'),
-    ('bg', 'Background', 'Background render'),
-    ('fg', 'Foreground', 'Foreground render'),
+    ("element", "Element", "Element render"),
+    ("vfx", "VFX", "VFX render"),
+    ("lighting", "Lighting", "Lighting render"),
+    ("char", "Character", "Character render"),
+    ("bg", "Background", "Background render"),
+    ("fg", "Foreground", "Foreground render"),
 ]
 
 
 class FF_RendProperties(bpy.types.PropertyGroup):
     """Custom properties for FF Render tools"""
-    
+
     # Render type selection (radio button behavior)
     render_type: bpy.props.EnumProperty(
         name="Render Type",
         description="Select render type",
         items=[
-            ('asset', 'Asset', 'Asset render'),
-            ('shot', 'Shot', 'Shot render'),
+            ("asset", "Asset", "Asset render"),
+            ("shot", "Shot", "Shot render"),
         ],
-        default='asset',
-        options={'ANIMATABLE'}
+        default="asset",
+        options={"ANIMATABLE"},
     )
-    
+
     # Asset type dropdown
     asset_type: bpy.props.EnumProperty(
         name="Asset Type",
         description="Select asset type",
         items=ASSET_TYPE_ITEMS,
-        default='model',
-        options={'ANIMATABLE'}
+        default="model",
+        options={"ANIMATABLE"},
     )
-    
+
     # Shot type dropdown
     shot_type: bpy.props.EnumProperty(
         name="Shot Type",
         description="Select shot type",
         items=SHOT_TYPE_ITEMS,
-        default='element',
-        options={'ANIMATABLE'}
+        default="element",
+        options={"ANIMATABLE"},
     )
-    
+
     # Custom suffix input
     custom_suffix: bpy.props.StringProperty(
         name="Custom Suffix",
         description="Custom suffix for output filename (auto-filled based on type selection)",
         default="",
-        options={'ANIMATABLE'}
+        options={"ANIMATABLE"},
     )
-    
+
     # Use same directory (output path = blender file location)
     use_same_dir: bpy.props.BoolProperty(
         name="Use Same Directory",
         description="Use the same output directory as blender file location",
         default=False,
-        options={'ANIMATABLE'}
+        options={"ANIMATABLE"},
     )
-    
+
     # Use subdirectory (create subfolder based on filename)
     use_subdir: bpy.props.BoolProperty(
         name="Use Subdirectory",
         description="Create subdirectory based on blender filename",
         default=True,
-        options={'ANIMATABLE'}
+        options={"ANIMATABLE"},
     )
-    
+
     # Use file version (extract version from filename)
     use_file_version: bpy.props.BoolProperty(
         name="Use File Version",
         description="Extract and use version number from blender filename",
         default=True,
-        options={'ANIMATABLE'}
+        options={"ANIMATABLE"},
     )
 
 
@@ -592,11 +623,12 @@ class FF_RendProperties(bpy.types.PropertyGroup):
 # PANELS
 # ============================================
 
+
 # Original N-Panel (kept for backward compatibility)
-class FfPollRend():
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'TOOLS'
-    
+class FfPollRend:
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "TOOLS"
+
     @classmethod
     def poll(cls, context):
         return context.scene.ff_rend == True
@@ -613,65 +645,74 @@ class FF_PT_Rend(FfPollRend, bpy.types.Panel):
         layout = self.layout
         box = layout.box()
         col = box.column(align=True)
-        col.label(text='Char Sheet')
+        col.label(text="Char Sheet")
         row = col.row(align=True)
         row.operator("ffrend.setup_char_sheet", text="Setup", icon="OUTLINER_OB_CAMERA")
         row = col.row(align=True)
-        row.operator("ffrend.render_char_sheet", text="Render OpenGL", icon="IMAGE_DATA")
+        row.operator(
+            "ffrend.render_char_sheet", text="Render OpenGL", icon="IMAGE_DATA"
+        )
         row = col.row(align=True)
-        row.operator("ffrend.render_char_sheet_viewport", text="Render Viewport", icon="SCENE")
+        row.operator(
+            "ffrend.render_char_sheet_viewport", text="Render Viewport", icon="SCENE"
+        )
         # ANIMATED CAMERA
         col = box.column(align=True)
-        col.label(text='360 Turnaround')
+        col.label(text="360 Turnaround")
         row = col.row(align=True)
-        row.operator("ffrend.setup_360_turnaround", text="Setup 360 Turnaround", icon="CON_TRACKTO")
+        row.operator(
+            "ffrend.setup_360_turnaround",
+            text="Setup 360 Turnaround",
+            icon="CON_TRACKTO",
+        )
 
 
 # NEW: Inject buttons into existing Output Properties panel
 class FF_PT_OutputPanel(bpy.types.Panel):
     """Inject custom render buttons into Output Properties"""
+
     bl_idname = "FF_PT_OutputPanel"
     bl_label = "FF Render Tools"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = 'output'
+    bl_space_type = "PROPERTIES"
+    bl_region_type = "WINDOW"
+    bl_context = "output"
     bl_order = 1  # Lower number = appears earlier in the panel
 
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        
+
         # Check if properties are registered
-        if not hasattr(scene, 'ff_rend_props'):
+        if not hasattr(scene, "ff_rend_props"):
             layout.label(text="Properties not registered yet", icon="ERROR")
             return
-            
+
         props = scene.ff_rend_props
-        
+
         # Create a box for our custom settings
         box = layout.box()
         box.label(text="FF Render Tools", icon="IMAGE_PLANE")
-        
+
         # Row 1: Render Type + Type-specific dropdown
         row = box.row(align=True)
         row.prop(props, "render_type", text="")
-        if props.render_type == 'asset':
+        if props.render_type == "asset":
             row.prop(props, "asset_type", text="")
         else:
             row.prop(props, "shot_type", text="")
-        
+
         # Row 2: Custom suffix
         row = box.row(align=True)
         row.prop(props, "custom_suffix", text="Custom Suffix")
-        
+
         # Row 3: All checkboxes in one row
         row = box.row(align=True)
         row.prop(props, "use_same_dir", text="Same Dir")
         row.prop(props, "use_subdir", text="Subdir")
         row.prop(props, "use_file_version", text="Version")
-        
+
         box.separator()
-        
+
         # Row 4: Render operators (PNG, EXR, Playblast)
         row = box.row(align=True)
         row.operator("ffrend.png_render", text="PNG", icon="IMAGE_DATA")
