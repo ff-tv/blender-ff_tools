@@ -473,17 +473,7 @@ class FF_OT_Setup360Turnaround(bpy.types.Operator):
         bpy.context.scene.collection.objects.link(camera)
 
         # Position camera at starting point
-        camera.location = (
-            subject_location.x + self.distance,
-            subject_location.y,
-            subject_location.z + self.height,
-        )
-
-        # Make camera look at subject
-        constraint = camera.constraints.new(type="TRACK_TO")
-        constraint.target = subject
-        constraint.track_axis = "TRACK_NEGATIVE_Z"
-        constraint.up_axis = "UP_Y"
+        # camera.location = (subject_location.x + self.distance, subject_location.y,subject_location.z + self.height)
 
         # Create orbit path (circle)
         bpy.ops.curve.primitive_nurbs_circle_add(
@@ -506,18 +496,27 @@ class FF_OT_Setup360Turnaround(bpy.types.Operator):
         path_constraint = camera.constraints.new(type="FOLLOW_PATH")
         path_constraint.target = path
         path_constraint.use_curve_follow = True
-        path_constraint.up_axis = "UP_Y"
+        path_constraint.up_axis = "UP_Z"
+        # path_constraint.use_fixed_position = True
 
-        # Animate camera along path
+        # Animate camera along path using constraint offset
         bpy.context.scene.frame_start = 1
         bpy.context.scene.frame_end = self.duration
 
-        # Set path animation
+        # Set path animation duration (enables path animation checkbox)
         path.data.path_duration = self.duration
-        path.data.eval_time = 0
-        path.data.keyframe_insert(data_path="eval_time", frame=1)
-        path.data.eval_time = 100
-        path.data.keyframe_insert(data_path="eval_time", frame=self.duration)
+
+        # Keyframe the constraint offset from 0 to 100 (start to end of path)
+        path_constraint.offset = 0.0
+        path_constraint.keyframe_insert(data_path="offset", frame=1)
+        path_constraint.offset = 100.0
+        path_constraint.keyframe_insert(data_path="offset", frame=self.duration)
+
+        # Make camera look at subject
+        constraint = camera.constraints.new(type="TRACK_TO")
+        constraint.target = subject
+        constraint.track_axis = "TRACK_NEGATIVE_Z"
+        constraint.up_axis = "UP_Y"
 
         # Set camera as active
         bpy.context.scene.camera = camera
