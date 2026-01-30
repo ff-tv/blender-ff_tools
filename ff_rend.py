@@ -565,6 +565,7 @@ class FF_RendProperties(bpy.types.PropertyGroup):
         ],
         default="asset",
         options={"ANIMATABLE"},
+        update=lambda self, context: self.update_custom_suffix(context),
     )
 
     # Asset type dropdown
@@ -574,6 +575,7 @@ class FF_RendProperties(bpy.types.PropertyGroup):
         items=ASSET_TYPE_ITEMS,
         default="model",
         options={"ANIMATABLE"},
+        update=lambda self, context: self.update_custom_suffix(context),
     )
 
     # Shot type dropdown
@@ -583,15 +585,23 @@ class FF_RendProperties(bpy.types.PropertyGroup):
         items=SHOT_TYPE_ITEMS,
         default="element",
         options={"ANIMATABLE"},
+        update=lambda self, context: self.update_custom_suffix(context),
     )
 
     # Custom suffix input
     custom_suffix: bpy.props.StringProperty(
         name="Custom Suffix",
-        description="Custom suffix for output filename (auto-filled based on type selection)",
-        default="",
+        description="Custom suffix for output filename (auto-filled from dropdown, editable)",
+        default="asset_model",
         options={"ANIMATABLE"},
     )
+
+    def update_custom_suffix(self, context):
+        """Update custom suffix based on render type and asset/shot type selection"""
+        if self.render_type == "asset":
+            self.custom_suffix = f"asset_{self.asset_type}"
+        else:
+            self.custom_suffix = f"shot_{self.shot_type}"
 
     # Use same directory (output path = blender file location)
     use_same_dir: bpy.props.BoolProperty(

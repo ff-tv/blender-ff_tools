@@ -11,6 +11,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+import os
+
+# Add bundled dependencies to Python path
+addon_dir = os.path.dirname(os.path.abspath(__file__))
+deps_dir = os.path.join(addon_dir, 'deps')
+if os.path.isdir(deps_dir) and deps_dir not in sys.path:
+    sys.path.insert(0, deps_dir)
+
 bl_info = {
     "name" : "FF_Tools",
     "author" : "lalamax3d",
